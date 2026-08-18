@@ -6,7 +6,7 @@ Build a small IMAP4rev1 server that lets an IMAP client authenticate, open an Ag
 
 You have two working days. We value a reliable vertical slice over broad command coverage.
 
-This is a paid, time-bounded evaluation using synthetic data. The submitted implementation will not be shipped.
+This is a time-bounded evaluation using synthetic data. The submitted implementation will not be shipped.
 
 ## Provided
 
