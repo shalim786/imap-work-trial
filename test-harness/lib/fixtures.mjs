@@ -1,0 +1,217 @@
+import { createHash } from "node:crypto";
+
+function rawMessage(lines) {
+  return Buffer.from(`${lines.join("\r\n")}\r\n`, "utf8");
+}
+
+function fixture({
+  id,
+  threadId,
+  labels,
+  timestamp,
+  from,
+  to,
+  subject,
+  preview,
+  text,
+  raw,
+}) {
+  return Object.freeze({
+    id,
+    threadId,
+    labels: Object.freeze([...labels]),
+    timestamp,
+    from,
+    to: Object.freeze([...to]),
+    subject,
+    preview,
+    text,
+    raw,
+  });
+}
+
+export const INBOX_ID = "candidate@imap.test";
+export const API_KEY = "test_agentmail_key";
+
+export const BASE_MESSAGES = Object.freeze([
+  fixture({
+    id: "msg_received_ascii",
+    threadId: "thread_ascii",
+    labels: ["received", "unread"],
+    timestamp: "2026-08-17T16:00:00.000Z",
+    from: "Ada Lovelace <ada@example.com>",
+    to: [INBOX_ID],
+    subject: "A small deterministic message",
+    preview: "The simplest fixture in the mailbox.",
+    text: "The simplest fixture in the mailbox.\r\n",
+    raw: rawMessage([
+      "From: Ada Lovelace <ada@example.com>",
+      `To: ${INBOX_ID}`,
+      "Subject: A small deterministic message",
+      "Date: Mon, 17 Aug 2026 16:00:00 +0000",
+      "Message-ID: <ascii-001@imap.test>",
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      "The simplest fixture in the mailbox.",
+    ]),
+  }),
+  fixture({
+    id: "msg_received_utf8",
+    threadId: "thread_utf8",
+    labels: ["received", "read", "starred"],
+    timestamp: "2026-08-17T17:00:00.000Z",
+    from: "Renée <renee@example.net>",
+    to: [INBOX_ID],
+    subject: "Unicode check: café, 東京, 🚀",
+    preview: "Character counts are not byte counts.",
+    text: "Character counts are not byte counts: naïve, 東京, 🚀.\r\n",
+    raw: rawMessage([
+      "From: =?UTF-8?Q?Ren=C3=A9e?= <renee@example.net>",
+      `To: ${INBOX_ID}`,
+      "Subject: =?UTF-8?B?VW5pY29kZSBjaGVjazogY2Fmw6ksIOadseS6rCwg8J+agA==?=",
+      "Date: Mon, 17 Aug 2026 17:00:00 +0000",
+      "Message-ID: <utf8-002@imap.test>",
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      "Character counts are not byte counts: naïve, 東京, 🚀.",
+    ]),
+  }),
+  fixture({
+    id: "msg_received_attachment",
+    threadId: "thread_attachment",
+    labels: ["received", "unread"],
+    timestamp: "2026-08-17T18:00:00.000Z",
+    from: "Fixtures <fixtures@example.org>",
+    to: [INBOX_ID],
+    subject: "Multipart fixture",
+    preview: "This message contains a tiny attachment.",
+    text: "This message contains a tiny attachment.\r\n",
+    raw: rawMessage([
+      "From: Fixtures <fixtures@example.org>",
+      `To: ${INBOX_ID}`,
+      "Subject: Multipart fixture",
+      "Date: Mon, 17 Aug 2026 18:00:00 +0000",
+      "Message-ID: <attachment-003@imap.test>",
+      "MIME-Version: 1.0",
+      'Content-Type: multipart/mixed; boundary="fixture-boundary"',
+      "",
+      "--fixture-boundary",
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      "This message contains a tiny attachment.",
+      "--fixture-boundary",
+      'Content-Type: text/plain; name="hello.txt"',
+      'Content-Disposition: attachment; filename="hello.txt"',
+      "Content-Transfer-Encoding: base64",
+      "",
+      "aGVsbG8gZnJvbSB0aGUgaGFybmVzcw0K",
+      "--fixture-boundary--",
+    ]),
+  }),
+  fixture({
+    id: "msg_sent",
+    threadId: "thread_sent",
+    labels: ["sent", "read"],
+    timestamp: "2026-08-17T19:00:00.000Z",
+    from: INBOX_ID,
+    to: ["recipient@example.com"],
+    subject: "A sent message",
+    preview: "This fixture belongs in Sent.",
+    text: "This fixture belongs in Sent.\r\n",
+    raw: rawMessage([
+      `From: ${INBOX_ID}`,
+      "To: recipient@example.com",
+      "Subject: A sent message",
+      "Date: Mon, 17 Aug 2026 19:00:00 +0000",
+      "Message-ID: <sent-004@imap.test>",
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      "This fixture belongs in Sent.",
+    ]),
+  }),
+  fixture({
+    id: "msg_trash",
+    threadId: "thread_trash",
+    labels: ["trash", "read"],
+    timestamp: "2026-08-17T20:00:00.000Z",
+    from: "Trash Fixture <trash@example.com>",
+    to: [INBOX_ID],
+    subject: "Trash-only message",
+    preview: "This fixture belongs in Trash.",
+    text: "This fixture belongs in Trash.\r\n",
+    raw: rawMessage([
+      "From: Trash Fixture <trash@example.com>",
+      `To: ${INBOX_ID}`,
+      "Subject: Trash-only message",
+      "Date: Mon, 17 Aug 2026 20:00:00 +0000",
+      "Message-ID: <trash-005@imap.test>",
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      "This fixture belongs in Trash.",
+    ]),
+  }),
+  fixture({
+    id: "msg_multi_label",
+    threadId: "thread_multi",
+    labels: ["received", "trash", "unread"],
+    timestamp: "2026-08-17T21:00:00.000Z",
+    from: "Labels <labels@example.com>",
+    to: [INBOX_ID],
+    subject: "A message in two mailboxes",
+    preview: "AgentMail labels are not exclusive folders.",
+    text: "AgentMail labels are not exclusive folders.\r\n",
+    raw: rawMessage([
+      "From: Labels <labels@example.com>",
+      `To: ${INBOX_ID}`,
+      "Subject: A message in two mailboxes",
+      "Date: Mon, 17 Aug 2026 21:00:00 +0000",
+      "Message-ID: <multi-006@imap.test>",
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      "AgentMail labels are not exclusive folders.",
+    ]),
+  }),
+]);
+
+export const ADDED_MESSAGE = fixture({
+  id: "msg_new_arrival",
+  threadId: "thread_new_arrival",
+  labels: ["received", "unread"],
+  timestamp: "2026-08-18T16:00:00.000Z",
+  from: "New Arrival <new@example.com>",
+  to: [INBOX_ID],
+  subject: "Arrived after the first IMAP snapshot",
+  preview: "Existing UIDs must not move when this appears.",
+  text: "Existing UIDs must not move when this appears.\r\n",
+  raw: rawMessage([
+    "From: New Arrival <new@example.com>",
+    `To: ${INBOX_ID}`,
+    "Subject: Arrived after the first IMAP snapshot",
+    "Date: Tue, 18 Aug 2026 16:00:00 +0000",
+    "Message-ID: <new-007@imap.test>",
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Existing UIDs must not move when this appears.",
+  ]),
+});
+
+export function cloneFixture(item) {
+  return {
+    ...item,
+    labels: [...item.labels],
+    to: [...item.to],
+    raw: Buffer.from(item.raw),
+  };
+}
+
+export function rawSha256(raw) {
+  return createHash("sha256").update(raw).digest("hex");
+}
