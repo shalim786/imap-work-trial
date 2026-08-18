@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a small IMAP4rev1 server that lets an IMAP client authenticate, open an AgentMail inbox, and fetch real messages through the AgentMail API.
+Build a small IMAP4rev1 server that lets an IMAP client read AgentMail messages and create drafts through the AgentMail API.
 
 You have two working days. We value a reliable vertical slice over broad command coverage.
 
@@ -24,7 +24,9 @@ This is a time-bounded evaluation using synthetic data. The submitted implementa
 3. Authenticate with an inbox ID and API key.
 4. List and select `INBOX`.
 5. Fetch metadata and raw RFC 822 messages.
-6. Disconnect cleanly.
+6. List and select `Drafts`, then fetch existing drafts.
+7. Append a plain-text message to `Drafts` and create an AgentMail draft.
+8. Disconnect cleanly.
 
 ## Mailboxes and flags
 
@@ -38,6 +40,8 @@ AgentMail labels map to fixed IMAP mailboxes:
 | `Spam`       | `spam`          |
 
 A message may appear in multiple mailboxes. Each mailbox has its own UID space.
+
+`Drafts` is backed by the AgentMail Drafts API, not a message label. Every item in it has the `\Draft` flag and its UID is keyed by `draft_id`.
 
 | IMAP flag  | AgentMail label |
 | ---------- | --------------- |
@@ -54,6 +58,7 @@ Implement:
 - `LIST`
 - `SELECT`
 - `UID FETCH`
+- `APPEND` for `Drafts`
 - `NOOP`
 - `LOGOUT`
 
@@ -74,6 +79,17 @@ Your server must also:
 - return exact raw bytes with byte-based literal lengths;
 - keep per-mailbox UIDs stable across reconnects and process restarts;
 - avoid renumbering or reusing UIDs when messages appear.
+
+For `Drafts`:
+
+- follow draft-list pagination and fetch each full draft;
+- project each draft as a CRLF-framed, `text/plain` RFC 822 message using `From`, `To`, `Cc`, `Bcc`, `Reply-To`, `Subject`, and `text` where present;
+- report `RFC822.SIZE` from the projected byte length;
+- accept a synchronizing `APPEND Drafts (\Draft) {n}` literal containing a UTF-8 `text/plain` message;
+- create the draft with the parsed `to`, `cc`, `bcc`, `reply_to`, `subject`, and `text` fields;
+- keep draft UIDs stable across reconnects and process restarts.
+
+The supplied fixtures use simple address headers and unencoded subjects. Multipart bodies, attachments, draft update/delete, and sending are out of scope. Reject unsupported `APPEND` forms cleanly.
 
 Local SQLite or another lightweight persistent store is sufficient. TLS and deployment are out of scope.
 
@@ -114,7 +130,7 @@ By the Day 2 code freeze, commit:
 | 9:00  | Welcome and environment check                        |
 | 10:00 | Plan sync: architecture, milestones, risks, and cuts |
 | 1:30  | Working-slice checkpoint                             |
-| 4:30  | Demo, blockers, and Day 2 plan                       |                                         |
+| 4:30  | Demo, blockers, and Day 2 plan                       |
 
 ### Day 2
 
@@ -125,7 +141,6 @@ By the Day 2 code freeze, commit:
 | 3:30 | Code freeze                       |
 | 4:00 | Final presentation and live demo  |
 | 4:45 | Candidate questions and wrap-up   |
-
 
 ## Evaluation
 

@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createFakeAgentMailServer } from "../fake-agentmail-api.mjs";
-import { API_KEY, BASE_MESSAGES, INBOX_ID } from "../lib/fixtures.mjs";
+import {
+  API_KEY,
+  BASE_DRAFTS,
+  BASE_MESSAGES,
+  INBOX_ID,
+} from "../lib/fixtures.mjs";
 
 async function jsonRequest(
   url,
@@ -78,6 +83,59 @@ test("serves exact raw bytes through the documented two-step flow", async (t) =>
   const raw = Buffer.from(await rawResponse.arrayBuffer());
   assert.equal(rawResponse.status, 200);
   assert.ok(raw.equals(fixture.raw));
+});
+
+test("lists paginated drafts and returns full draft bodies", async (t) => {
+  const { baseUrl } = await withServer(t);
+  const first = await jsonRequest(
+    `${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/drafts?limit=100`,
+  );
+  assert.equal(first.response.status, 200);
+  assert.equal(first.value.drafts.length, 1);
+  assert.ok(first.value.next_page_token);
+  assert.equal("text" in first.value.drafts[0], false);
+
+  const second = await jsonRequest(
+    `${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/drafts?limit=100&page_token=${encodeURIComponent(first.value.next_page_token)}`,
+  );
+  assert.equal(second.response.status, 200);
+  assert.equal(second.value.drafts.length, 1);
+  assert.equal(second.value.next_page_token, undefined);
+
+  const fixture = BASE_DRAFTS[0];
+  const get = await jsonRequest(
+    `${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/drafts/${fixture.id}`,
+  );
+  assert.equal(get.response.status, 200);
+  assert.equal(get.value.text, fixture.text);
+});
+
+test("creates a plain-text draft and exposes it in test state", async (t) => {
+  const { baseUrl, controlRoot } = await withServer(t);
+  const created = await jsonRequest(
+    `${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/drafts`,
+    {
+      method: "POST",
+      body: {
+        to: ["append@example.com"],
+        cc: ["copy@example.com"],
+        subject: "Created in test",
+        text: "Draft body",
+      },
+    },
+  );
+  assert.equal(created.response.status, 200);
+  assert.match(created.value.draft_id, /^draft_created_/);
+  assert.equal(created.value.text, "Draft body");
+
+  const state = await jsonRequest(`${controlRoot}/_test/state`, {
+    authenticated: false,
+  });
+  const draft = state.value.drafts.find(
+    (item) => item.draft_id === created.value.draft_id,
+  );
+  assert.deepEqual(draft.to, ["append@example.com"]);
+  assert.equal(draft.subject, "Created in test");
 });
 
 test("updates labels and exposes state without exposing raw bodies", async (t) => {

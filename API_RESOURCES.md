@@ -9,6 +9,10 @@ Checked against the public API on 2026-08-18. The official documentation is the 
 - [List Messages](https://docs.agentmail.to/api-reference/inboxes/messages/list)
 - [Get Raw Message](https://docs.agentmail.to/api-reference/inboxes/messages/get-raw)
 - [Update Message](https://docs.agentmail.to/api-reference/inboxes/messages/update)
+- [List Drafts](https://docs.agentmail.to/api-reference/inboxes/drafts/list)
+- [Get Draft](https://docs.agentmail.to/api-reference/inboxes/drafts/get)
+- [Create Draft](https://docs.agentmail.to/api-reference/inboxes/drafts/create)
+- [Drafts guide](https://docs.agentmail.to/drafts)
 - [Messages guide](https://docs.agentmail.to/messages)
 - [Inboxes guide](https://docs.agentmail.to/inboxes)
 
@@ -35,6 +39,9 @@ Authenticate REST requests with `Authorization: Bearer <api-key>`. The local fak
 | `GET`   | `/inboxes/:inbox_id/messages/:message_id`     | Read metadata and labels                   |
 | `GET`   | `/inboxes/:inbox_id/messages/:message_id/raw` | Receive `download_url`, `size`, and expiry |
 | `PATCH` | `/inboxes/:inbox_id/messages/:message_id`     | Add or remove labels for optional `STORE`  |
+| `GET`   | `/inboxes/:inbox_id/drafts`                   | List drafts; follow `next_page_token`      |
+| `GET`   | `/inboxes/:inbox_id/drafts/:draft_id`         | Read the full draft body                   |
+| `POST`  | `/inboxes/:inbox_id/drafts`                   | Create a draft from `APPEND`               |
 
 Message-list items include `message_id`, `labels`, `timestamp`, addressing fields, `subject`, `headers`, and `size`. The raw endpoint returns a URL; download that URL as bytes without converting it through a text string.
 
@@ -46,6 +53,8 @@ Message updates use:
   "remove_labels": ["unread"]
 }
 ```
+
+Draft list items omit the full body. Fetch each draft, then use its structured address fields, `subject`, and `text` to build RFC 822 bytes. Draft creation accepts those same fields; this exercise does not send drafts.
 
 ## Official SDKs
 

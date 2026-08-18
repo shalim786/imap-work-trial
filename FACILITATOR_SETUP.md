@@ -19,9 +19,10 @@ The inbox should include:
 - unread and read received messages;
 - UTF-8 and multipart content;
 - sent and trash messages;
+- two plain-text drafts, including one with `cc`, `bcc`, and `reply_to`;
 - one message with multiple mailbox labels.
 
-Verify list pagination, metadata retrieval, raw download, and label updates. Revoke the key after the interview.
+Verify message and draft pagination, raw download, draft creation, and label updates. Grant only the matching inbox-scoped permissions, then revoke the key after the interview.
 
 ## Candidate handoff
 

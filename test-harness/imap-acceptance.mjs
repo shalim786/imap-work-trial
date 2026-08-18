@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   ADDED_MESSAGE,
+  APPEND_DRAFT,
+  APPEND_DRAFT_RAW,
   API_KEY,
+  BASE_DRAFTS,
   BASE_MESSAGES,
   INBOX_ID,
 } from "./lib/fixtures.mjs";
@@ -119,6 +122,130 @@ function assertFlags(record, fixture) {
   );
 }
 
+function parseDraftLiteral(raw) {
+  const separator = Buffer.from("\r\n\r\n", "ascii");
+  const separatorAt = raw.indexOf(separator);
+  assert.ok(separatorAt >= 0, "draft literal is not CRLF-framed RFC 822 data");
+  const headerLines = raw
+    .subarray(0, separatorAt)
+    .toString("utf8")
+    .split("\r\n");
+  const unfolded = [];
+  for (const line of headerLines) {
+    if (/^[ \t]/.test(line) && unfolded.length > 0) {
+      unfolded[unfolded.length - 1] += ` ${line.trim()}`;
+    } else {
+      unfolded.push(line);
+    }
+  }
+  const headers = new Map();
+  for (const line of unfolded) {
+    const colon = line.indexOf(":");
+    if (colon <= 0) continue;
+    const name = line.slice(0, colon).trim().toLowerCase();
+    const value = line.slice(colon + 1).trim();
+    headers.set(name, headers.has(name) ? `${headers.get(name)}, ${value}` : value);
+  }
+  const body = raw.subarray(separatorAt + separator.length).toString("utf8");
+  return { headers, body: body.replace(/(?:\r\n)+$/, "") };
+}
+
+function assertAddressHeader(headers, name, expected, draftId) {
+  const actual = headers.get(name) || "";
+  for (const address of expected) {
+    assert.ok(
+      actual.includes(address),
+      `${draftId}: ${name} header is missing ${address}`,
+    );
+  }
+}
+
+async function fetchDraftSnapshot(client, expectedDrafts) {
+  const metadataResponse = await client.command(
+    "UID FETCH 1:* (UID FLAGS RFC822.SIZE)",
+  );
+  requireStatus(metadataResponse, "OK", "UID FETCH Drafts metadata");
+  const metadata = parseFetchMetadata(metadataResponse.text);
+  assert.equal(
+    metadata.length,
+    expectedDrafts.length,
+    `expected ${expectedDrafts.length} draft FETCH records, received ${metadata.length}`,
+  );
+  assert.equal(
+    new Set(metadata.map((item) => item.uid)).size,
+    metadata.length,
+    "Drafts UIDs are not unique",
+  );
+
+  const expectedBySubject = new Map(
+    expectedDrafts.map((draft) => [draft.subject, draft]),
+  );
+  const byDraftId = new Map();
+  for (const item of metadata) {
+    requirePositiveInteger(item.uid, "draft UID");
+    requirePositiveInteger(item.sequence, "draft sequence number");
+    requirePositiveInteger(item.size, "draft RFC822.SIZE");
+    assert.ok(
+      item.flags.some((flag) => flag.toLowerCase() === "\\draft"),
+      `UID ${item.uid}: Drafts item is missing \\Draft`,
+    );
+
+    const bodyResponse = await client.command(
+      `UID FETCH ${item.uid} (UID BODY.PEEK[])`,
+    );
+    requireStatus(bodyResponse, "OK", `UID FETCH draft ${item.uid} body`);
+    const literal = extractFirstLiteral(bodyResponse.buffer);
+    assert.ok(literal, `draft UID ${item.uid}: response has no literal`);
+    assert.equal(literal.declaredLength, literal.bytes.length);
+    assert.equal(
+      item.size,
+      literal.bytes.length,
+      `draft UID ${item.uid}: RFC822.SIZE is not the returned byte length`,
+    );
+
+    const projected = parseDraftLiteral(literal.bytes);
+    const subject = projected.headers.get("subject");
+    const fixture = expectedBySubject.get(subject);
+    assert.ok(fixture, `draft UID ${item.uid}: unexpected Subject ${subject}`);
+    assert.ok(
+      !byDraftId.has(fixture.id),
+      `${fixture.id} was returned more than once`,
+    );
+    assertAddressHeader(projected.headers, "from", [INBOX_ID], fixture.id);
+    assertAddressHeader(projected.headers, "to", fixture.to, fixture.id);
+    assertAddressHeader(projected.headers, "cc", fixture.cc, fixture.id);
+    assertAddressHeader(projected.headers, "bcc", fixture.bcc, fixture.id);
+    assertAddressHeader(
+      projected.headers,
+      "reply-to",
+      fixture.replyTo,
+      fixture.id,
+    );
+    assert.match(
+      projected.headers.get("content-type") || "",
+      /text\/plain/i,
+      `${fixture.id}: projected draft must be text/plain`,
+    );
+    assert.equal(projected.body, fixture.text, `${fixture.id}: body changed`);
+    byDraftId.set(fixture.id, item.uid);
+  }
+  assert.equal(byDraftId.size, expectedDrafts.length);
+  return { metadata, byDraftId };
+}
+
+async function appendDraft(client, raw) {
+  const tag = client.nextTag();
+  client.write(`${tag} APPEND Drafts (\\Draft) {${raw.length}}\r\n`);
+  const continuation = await client.takeLine("APPEND continuation");
+  assert.match(
+    continuation.toString("utf8"),
+    /^\+[^\r\n]*\r\n$/,
+    "APPEND did not return a continuation request",
+  );
+  client.write(Buffer.concat([raw, Buffer.from("\r\n", "ascii")]));
+  return client.waitForTagged(tag);
+}
+
 async function connect(host, port) {
   const client = new ImapTestClient({ host, port });
   const greeting = await client.connect();
@@ -131,19 +258,19 @@ async function connect(host, port) {
   return client;
 }
 
-async function loginAndSelect(host, port, expectedCount) {
+async function loginAndSelect(host, port, mailbox, expectedCount) {
   const client = await connect(host, port);
   const login = await client.command(
     `LOGIN ${quoteImap(INBOX_ID)} ${quoteImap(API_KEY)}`,
   );
   requireStatus(login, "OK", "LOGIN");
-  const select = await client.command("SELECT INBOX");
-  requireStatus(select, "OK", "SELECT INBOX");
+  const select = await client.command(`SELECT ${quoteImap(mailbox)}`);
+  requireStatus(select, "OK", `SELECT ${mailbox}`);
   const selected = parseSelectResponse(select.text);
   assert.equal(
     selected.exists,
     expectedCount,
-    "SELECT EXISTS does not match received fixtures",
+    `SELECT EXISTS does not match ${mailbox} fixtures`,
   );
   requirePositiveInteger(selected.uidValidity, "UIDVALIDITY");
   requirePositiveInteger(selected.uidNext, "UIDNEXT");
@@ -278,6 +405,11 @@ async function run() {
     initialFixtures.length,
     "fake API fixture state is not at its baseline; rerun without --no-reset",
   );
+  assert.equal(
+    initialState.drafts.length,
+    BASE_DRAFTS.length,
+    "fake API draft state is not at its baseline; rerun without --no-reset",
+  );
 
   await check("pre-authentication mailbox access is rejected", async () => {
     const client = await connect(imapHost, imapPort);
@@ -335,6 +467,7 @@ async function run() {
     const list = await mainClient.command('LIST "" "*"');
     requireStatus(list, "OK", "LIST");
     assert.match(list.text, /\bINBOX\b/i, "LIST did not expose INBOX");
+    assert.match(list.text, /\bDrafts\b/i, "LIST did not expose Drafts");
     assert.match(
       list.text,
       /(?:\bSent\b|\bTrash\b|\bSpam\b)/i,
@@ -493,6 +626,7 @@ async function run() {
     const session = await loginAndSelect(
       imapHost,
       imapPort,
+      "INBOX",
       initialFixtures.length,
     );
     reconnectSelected = session.selected;
@@ -519,7 +653,12 @@ async function run() {
         method: "POST",
       });
       const expected = [...initialFixtures, ADDED_MESSAGE];
-      const session = await loginAndSelect(imapHost, imapPort, expected.length);
+      const session = await loginAndSelect(
+        imapHost,
+        imapPort,
+        "INBOX",
+        expected.length,
+      );
       finalSelected = session.selected;
       finalSnapshot = await fetchSnapshot(session.client, expected);
       compareUidMaps(
@@ -550,10 +689,114 @@ async function run() {
     },
   );
 
+  let firstDraftSelected;
+  let firstDraftSnapshot;
+  await check("Drafts lists and fetches AgentMail drafts", async () => {
+    const session = await loginAndSelect(
+      imapHost,
+      imapPort,
+      "Drafts",
+      BASE_DRAFTS.length,
+    );
+    firstDraftSelected = session.selected;
+    firstDraftSnapshot = await fetchDraftSnapshot(
+      session.client,
+      BASE_DRAFTS,
+    );
+    const maxUid = Math.max(
+      ...firstDraftSnapshot.metadata.map((item) => item.uid),
+    );
+    assert.ok(
+      firstDraftSelected.uidNext > maxUid,
+      "Drafts UIDNEXT must be greater than every allocated UID",
+    );
+    await logout(session.client);
+  });
+
+  let finalDraftSelected;
+  let finalDraftSnapshot;
+  await check(
+    "APPEND Drafts creates an API draft without renumbering existing drafts",
+    async () => {
+      const session = await loginAndSelect(
+        imapHost,
+        imapPort,
+        "Drafts",
+        BASE_DRAFTS.length,
+      );
+      const beforeAppend = await fetchDraftSnapshot(
+        session.client,
+        BASE_DRAFTS,
+      );
+      compareUidMaps(
+        firstDraftSnapshot.byDraftId,
+        beforeAppend.byDraftId,
+        "draft reconnect",
+      );
+      assert.equal(
+        session.selected.uidValidity,
+        firstDraftSelected.uidValidity,
+        "Drafts UIDVALIDITY changed across reconnect",
+      );
+
+      const append = await appendDraft(session.client, APPEND_DRAFT_RAW);
+      requireStatus(append, "OK", "APPEND Drafts");
+
+      const state = await controlRequest(controlRoot, "/_test/state");
+      const created = state.drafts.find(
+        (draft) => draft.subject === APPEND_DRAFT.subject,
+      );
+      assert.ok(created, "APPEND did not create a draft through the API");
+      assert.deepEqual(created.to, APPEND_DRAFT.to);
+      assert.deepEqual(created.cc, APPEND_DRAFT.cc);
+      assert.equal(
+        String(created.text).replace(/(?:\r\n)+$/, ""),
+        APPEND_DRAFT.text,
+        "APPEND changed the plain-text body",
+      );
+
+      const select = await session.client.command('SELECT "Drafts"');
+      requireStatus(select, "OK", "SELECT Drafts after APPEND");
+      finalDraftSelected = parseSelectResponse(select.text);
+      assert.equal(finalDraftSelected.exists, BASE_DRAFTS.length + 1);
+      const createdFixture = {
+        ...APPEND_DRAFT,
+        id: created.draft_id,
+        updatedAt: created.updated_at,
+      };
+      finalDraftSnapshot = await fetchDraftSnapshot(session.client, [
+        ...BASE_DRAFTS,
+        createdFixture,
+      ]);
+      compareUidMaps(
+        firstDraftSnapshot.byDraftId,
+        finalDraftSnapshot.byDraftId,
+        "draft APPEND sync",
+      );
+      const createdUid = finalDraftSnapshot.byDraftId.get(created.draft_id);
+      requirePositiveInteger(createdUid, "appended draft UID");
+      assert.ok(
+        createdUid > Math.max(...firstDraftSnapshot.byDraftId.values()),
+        "appended draft UID is not monotonic",
+      );
+      assert.ok(finalDraftSelected.uidNext > createdUid);
+      assert.equal(
+        finalDraftSelected.uidValidity,
+        firstDraftSelected.uidValidity,
+        "Drafts UIDVALIDITY changed after APPEND",
+      );
+      await logout(session.client);
+    },
+  );
+
   const serializableSnapshot = {
     uid_validity: finalSelected.uidValidity,
     messages: Object.fromEntries(
       [...finalSnapshot.byMessageId.entries()].sort(),
+    ),
+    draft_uid_validity: finalDraftSelected.uidValidity,
+    drafts: Object.fromEntries(
+      [...finalDraftSnapshot.byDraftId.entries()].sort(),
     ),
   };
 
@@ -570,6 +813,18 @@ async function run() {
           serializableSnapshot.messages[messageId],
           uid,
           `${messageId} changed UID after process restart`,
+        );
+      }
+      assert.equal(
+        serializableSnapshot.draft_uid_validity,
+        previous.draft_uid_validity,
+        "Drafts UIDVALIDITY changed after process restart",
+      );
+      for (const [draftId, uid] of Object.entries(previous.drafts)) {
+        assert.equal(
+          serializableSnapshot.drafts[draftId],
+          uid,
+          `${draftId} changed UID after process restart`,
         );
       }
     });

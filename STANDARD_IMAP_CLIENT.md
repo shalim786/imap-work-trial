@@ -26,6 +26,6 @@ Choose manual configuration and use:
 | Username            | `candidate@imap.test` |
 | Password            | `test_agentmail_key`  |
 
-The exercise does not provide SMTP, so sending mail is expected to fail. Incoming mailbox behavior is the only relevant path.
+The exercise does not provide SMTP, so sending mail is expected to fail. `Drafts` should be visible; clients may require optional IMAP commands beyond this exercise before their compose UI can save a draft.
 
 See Mozilla's [manual account configuration](https://support.mozilla.org/en-US/kb/manual-account-configuration) guide if the setup screen differs.

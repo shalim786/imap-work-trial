@@ -50,13 +50,14 @@ npm --prefix test-harness test
 
 ## What the default check covers
 
-- greeting, authentication, `LIST`, `SELECT`, `UID FETCH`, `NOOP`, and `LOGOUT`;
+- greeting, authentication, `LIST`, `SELECT`, `UID FETCH`, `APPEND Drafts`, `NOOP`, and `LOGOUT`;
 - session-state errors and unsupported commands;
 - split and coalesced TCP commands;
 - pagination, flags, raw bytes, UTF-8 byte lengths, and message sizes;
-- UID stability across reconnects and new-message arrival.
+- paginated draft projection, `\Draft`, and plain-text draft creation;
+- UID stability across reconnects, new-message arrival, and draft creation.
 
-The harness resets its fake API before each run. It deliberately returns short message pages to catch missing pagination.
+The harness resets its fake API before each run. It deliberately returns short message and draft pages to catch missing pagination.
 
 ## Failure controls
 

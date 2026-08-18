@@ -1,6 +1,6 @@
 # AgentMail IMAP work trial
 
-This repository starts without implementation code.
+This repository starts without implementation code. The required slice reads messages and creates plain-text drafts.
 
 1. Read the [assignment](./ASSIGNMENT.md).
 2. Review the [AgentMail API resources](./API_RESOURCES.md).

@@ -4,8 +4,10 @@ import { pathToFileURL } from "node:url";
 import {
   ADDED_MESSAGE,
   API_KEY,
+  BASE_DRAFTS,
   BASE_MESSAGES,
   INBOX_ID,
+  cloneDraftFixture,
   cloneFixture,
   rawSha256,
 } from "./lib/fixtures.mjs";
@@ -90,6 +92,25 @@ function messageJson(message, includeBody = false) {
   return value;
 }
 
+function draftJson(draft, includeBody = false) {
+  const value = {
+    inbox_id: INBOX_ID,
+    draft_id: draft.id,
+    labels: [],
+    to: [...draft.to],
+    cc: [...draft.cc],
+    bcc: [...draft.bcc],
+    reply_to: [...draft.replyTo],
+    subject: draft.subject,
+    preview: draft.text.slice(0, 100),
+    attachments: [],
+    updated_at: draft.updatedAt,
+    created_at: draft.updatedAt,
+  };
+  if (includeBody) value.text = draft.text;
+  return value;
+}
+
 function normalizePath(pathname) {
   return pathname.startsWith("/v0/") ? pathname.slice(3) : pathname;
 }
@@ -110,6 +131,8 @@ export function createFakeAgentMailServer({
   quiet = process.env.HARNESS_QUIET === "1",
 } = {}) {
   let messages = new Map();
+  let drafts = new Map();
+  let nextDraftNumber = 1;
   let failures = [];
   let requests = [];
 
@@ -117,6 +140,10 @@ export function createFakeAgentMailServer({
     messages = new Map(
       BASE_MESSAGES.map((item) => [item.id, cloneFixture(item)]),
     );
+    drafts = new Map(
+      BASE_DRAFTS.map((item) => [item.id, cloneDraftFixture(item)]),
+    );
+    nextDraftNumber = 1;
     failures = [];
     requests = [];
   };
@@ -149,7 +176,11 @@ export function createFakeAgentMailServer({
 
       if (path === "/_test/reset" && req.method === "POST") {
         reset();
-        return json(res, 200, { ok: true, message_count: messages.size });
+        return json(res, 200, {
+          ok: true,
+          message_count: messages.size,
+          draft_count: drafts.size,
+        });
       }
 
       if (path === "/_test/add-message" && req.method === "POST") {
@@ -184,6 +215,7 @@ export function createFakeAgentMailServer({
             ...messageJson(message, true),
             raw_sha256: rawSha256(message.raw),
           })),
+          drafts: [...drafts.values()].map((draft) => draftJson(draft, true)),
         });
       }
 
@@ -261,6 +293,86 @@ export function createFakeAgentMailServer({
           updated_at: "2026-08-18T00:00:00.000Z",
           created_at: "2026-08-01T00:00:00.000Z",
         });
+      }
+
+      const draftsListMatch = /^\/inboxes\/([^/]+)\/drafts\/?$/.exec(path);
+      if (draftsListMatch) {
+        if (decodeURIComponent(draftsListMatch[1]) !== INBOX_ID) {
+          return apiError(res, 404, "Inbox not found");
+        }
+
+        if (req.method === "GET") {
+          const offset = decodeOffset(requestUrl.searchParams.get("page_token"));
+          if (!Number.isInteger(offset) || offset < 0) {
+            return apiError(res, 400, "Invalid page_token");
+          }
+          const requestedLimit = Number(
+            requestUrl.searchParams.get("limit") || 50,
+          );
+          if (!Number.isFinite(requestedLimit) || requestedLimit < 1) {
+            return apiError(res, 400, "Invalid limit");
+          }
+          const items = [...drafts.values()].sort((a, b) =>
+            b.updatedAt.localeCompare(a.updatedAt),
+          );
+          const pageSize = Math.min(Math.floor(requestedLimit), 1);
+          const page = items.slice(offset, offset + pageSize);
+          const nextOffset = offset + page.length;
+          return json(res, 200, {
+            count: page.length,
+            limit: pageSize,
+            ...(nextOffset < items.length
+              ? { next_page_token: encodeOffset(nextOffset) }
+              : {}),
+            drafts: page.map((draft) => draftJson(draft)),
+          });
+        }
+
+        if (req.method === "POST") {
+          const body = await readJson(req);
+          const asAddressList = (value, field) => {
+            if (value === undefined) return [];
+            if (!Array.isArray(value)) {
+              throw new Error(`${field} must be an array`);
+            }
+            return value.map(String);
+          };
+          if (body.html !== undefined || body.attachments?.length) {
+            return apiError(
+              res,
+              400,
+              "The interview harness accepts plain-text drafts only",
+            );
+          }
+          const id = `draft_created_${String(nextDraftNumber).padStart(3, "0")}`;
+          const updatedAt = new Date(
+            Date.parse("2026-08-18T17:00:00.000Z") +
+              (nextDraftNumber - 1) * 1_000,
+          ).toISOString();
+          nextDraftNumber += 1;
+          const draft = {
+            id,
+            to: asAddressList(body.to, "to"),
+            cc: asAddressList(body.cc, "cc"),
+            bcc: asAddressList(body.bcc, "bcc"),
+            replyTo: asAddressList(body.reply_to, "reply_to"),
+            subject: String(body.subject || ""),
+            text: String(body.text || ""),
+            updatedAt,
+          };
+          drafts.set(id, draft);
+          return json(res, 200, draftJson(draft, true));
+        }
+      }
+
+      const draftMatch = /^\/inboxes\/([^/]+)\/drafts\/([^/]+)$/.exec(path);
+      if (draftMatch && req.method === "GET") {
+        if (decodeURIComponent(draftMatch[1]) !== INBOX_ID) {
+          return apiError(res, 404, "Inbox not found");
+        }
+        const draft = drafts.get(decodeURIComponent(draftMatch[2]));
+        if (!draft) return apiError(res, 404, "Draft not found");
+        return json(res, 200, draftJson(draft, true));
       }
 
       const listMatch = /^\/inboxes\/([^/]+)\/messages\/?$/.exec(path);
