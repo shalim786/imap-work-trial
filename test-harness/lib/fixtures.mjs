@@ -209,19 +209,19 @@ export const ADDED_MESSAGE = fixture({
   timestamp: "2026-08-18T16:00:00.000Z",
   from: "New Arrival <new@example.com>",
   to: [INBOX_ID],
-  subject: "Arrived after the first IMAP snapshot",
-  preview: "Existing UIDs must not move when this appears.",
-  text: "Existing UIDs must not move when this appears.\r\n",
+  subject: "A later delivery",
+  preview: "This message arrived after the baseline fixture set.",
+  text: "This message arrived after the baseline fixture set.\r\n",
   raw: rawMessage([
     "From: New Arrival <new@example.com>",
     `To: ${INBOX_ID}`,
-    "Subject: Arrived after the first IMAP snapshot",
+    "Subject: A later delivery",
     "Date: Tue, 18 Aug 2026 16:00:00 +0000",
     "Message-ID: <new-007@imap.test>",
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=utf-8",
     "",
-    "Existing UIDs must not move when this appears.",
+    "This message arrived after the baseline fixture set.",
   ]),
 });
 
@@ -240,29 +240,9 @@ export const BASE_DRAFTS = Object.freeze([
     bcc: ["audit@example.net"],
     replyTo: ["replies@example.net"],
     subject: "Draft with address fields",
-    text: "All disclosed address fields should survive projection.",
+    text: "Please keep all recipients on this draft.",
     updatedAt: "2026-08-17T23:00:00.000Z",
   }),
-]);
-
-export const APPEND_DRAFT = draftFixture({
-  id: "created-by-api",
-  to: ["append-recipient@example.com"],
-  cc: ["append-copy@example.com"],
-  subject: "Created through IMAP APPEND",
-  text: "This body came from an IMAP literal.",
-  updatedAt: "2026-08-18T17:00:00.000Z",
-});
-
-export const APPEND_DRAFT_RAW = rawMessage([
-  `From: ${INBOX_ID}`,
-  `To: ${APPEND_DRAFT.to.join(", ")}`,
-  `Cc: ${APPEND_DRAFT.cc.join(", ")}`,
-  `Subject: ${APPEND_DRAFT.subject}`,
-  "MIME-Version: 1.0",
-  "Content-Type: text/plain; charset=utf-8",
-  "",
-  APPEND_DRAFT.text,
 ]);
 
 export function cloneFixture(item) {

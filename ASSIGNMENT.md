@@ -2,109 +2,51 @@
 
 ## Goal
 
-Build a small IMAP4rev1 server that lets an IMAP client read AgentMail messages and create drafts through the AgentMail API.
+Build a small IMAP4rev1 server over the public AgentMail API. A client should be able to read inbox messages and save a plain-text draft.
 
-You have two working days. We value a reliable vertical slice over broad command coverage.
+You have two working days. Build a reliable vertical slice and explain your tradeoffs. The exercise uses synthetic data and will not be shipped.
 
-This is a time-bounded evaluation using synthetic data. The submitted implementation will not be shipped.
+## Required outcome
 
-## Provided
+A user must be able to:
 
-- This empty implementation repository and local validation harness.
-- [AgentMail API documentation and official SDK links](./API_RESOURCES.md).
-- A local synthetic inbox and non-production test key.
-- A hosted synthetic inbox and inbox-scoped key from the facilitator.
-- A [raw TCP example](./MANUAL_SMOKE_TEST.md) and optional [standard-client setup](./STANDARD_IMAP_CLIENT.md).
-- Internet access for public RFCs and general technical research.
+1. start your server with one documented command;
+2. connect over local TCP and authenticate with an inbox ID and API key;
+3. discover and open `INBOX` and `Drafts`;
+4. fetch message metadata and complete RFC 822 content;
+5. inspect existing AgentMail drafts;
+6. append a plain-text draft without losing its recipients, subject, or body;
+7. disconnect cleanly.
 
-## Required user path
+At minimum, support the parts of `CAPABILITY`, `LOGIN`, `LIST`, `SELECT`, `UID FETCH`, `APPEND`, `NOOP`, and `LOGOUT` needed for that path.
 
-1. Start the server with one documented command.
-2. Connect over TCP and receive an IMAP greeting.
-3. Authenticate with an inbox ID and API key.
-4. List and select `INBOX`.
-5. Fetch metadata and raw RFC 822 messages.
-6. List and select `Drafts`, then fetch existing drafts.
-7. Append a plain-text message to `Drafts` and create an AgentMail draft.
-8. Disconnect cleanly.
+## Correctness expectations
 
-## Mailboxes and flags
+- `INBOX` represents received AgentMail messages. `Drafts` uses the AgentMail Drafts API.
+- Reflect read state as `\Seen` and identify drafts with `\Draft`. Decide and document any other mailbox or flag mappings.
+- Preserve raw message bytes and use byte lengths for IMAP literals and sizes.
+- Do not silently truncate paginated API results.
+- Keep UIDs stable across reconnects and process restarts. Adding an item must not renumber or reuse existing UIDs.
+- Handle malformed commands, invalid credentials, unsupported behavior, and API failures without crashing, hanging, or exposing secrets.
+- TLS, deployment, attachments in new drafts, draft sending, and production compatibility are out of scope.
 
-AgentMail labels map to fixed IMAP mailboxes:
+## Decisions you own
 
-| IMAP mailbox | AgentMail label |
-| ------------ | --------------- |
-| `INBOX`      | `received`      |
-| `Sent`       | `sent`          |
-| `Trash`      | `trash`         |
-| `Spam`       | `spam`          |
+Choose and be prepared to defend:
 
-A message may appear in multiple mailboxes. Each mailbox has its own UID space.
+- language, dependencies, and project structure;
+- parser and session-state design;
+- mailbox behavior beyond `INBOX` and `Drafts`;
+- draft-to-RFC-822 projection;
+- persistence, synchronization, and caching strategy;
+- test approach and one additional IMAP capability if the core is reliable.
 
-`Drafts` is backed by the AgentMail Drafts API, not a message label. Every item in it has the `\Draft` flag and its UID is keyed by `draft_id`.
-
-| IMAP flag  | AgentMail label |
-| ---------- | --------------- |
-| `\Seen`    | `read`          |
-| `\Flagged` | `starred`       |
-| `\Deleted` | `trash`         |
-
-## Required scope
-
-Implement:
-
-- `CAPABILITY`
-- `LOGIN`
-- `LIST`
-- `SELECT`
-- `UID FETCH`
-- `APPEND` for `Drafts`
-- `NOOP`
-- `LOGOUT`
-
-For `UID FETCH`, support `1:*` and:
-
-- `UID`
-- `FLAGS`
-- `RFC822.SIZE`
-- `BODY.PEEK[]` or `RFC822`
-
-Your server must also:
-
-- listen on a configurable local TCP port;
-- use CRLF framing and buffer split or coalesced TCP commands;
-- reject malformed, unsupported, or out-of-state commands cleanly;
-- validate that the API key can access the requested inbox;
-- follow message-list pagination;
-- return exact raw bytes with byte-based literal lengths;
-- keep per-mailbox UIDs stable across reconnects and process restarts;
-- avoid renumbering or reusing UIDs when messages appear.
-
-For `Drafts`:
-
-- follow draft-list pagination and fetch each full draft;
-- project each draft as a CRLF-framed, `text/plain` RFC 822 message using `From`, `To`, `Cc`, `Bcc`, `Reply-To`, `Subject`, and `text` where present;
-- report `RFC822.SIZE` from the projected byte length;
-- accept a synchronizing `APPEND Drafts (\Draft) {n}` literal containing a UTF-8 `text/plain` message;
-- create the draft with the parsed `to`, `cc`, `bcc`, `reply_to`, `subject`, and `text` fields;
-- keep draft UIDs stable across reconnects and process restarts.
-
-The supplied fixtures use simple address headers and unencoded subjects. Multipart bodies, attachments, draft update/delete, and sending are out of scope. Reject unsupported `APPEND` forms cleanly.
-
-Local SQLite or another lightweight persistent store is sufficient. TLS and deployment are out of scope.
-
-## Target after the core works
-
-Implement `UID STORE` for `+FLAGS`, `-FLAGS`, and `.SILENT` forms of `\Seen`. Translate changes to AgentMail `read` and `unread` labels.
-
-Optional extensions include richer sequence sets, `FETCH`, `STATUS`, `EXAMINE`, `SEARCH`, `MOVE`, or `IDLE`. Extensions do not compensate for a broken core path.
+Document the syntax and behavior you support. You may deliberately reject valid IMAP forms outside your chosen slice.
 
 ## Rules
 
-- Use any language you can explain and debug.
-- HTTP, database, and test libraries are allowed.
-- Do not use a library that implements the IMAP server or protocol core.
 - Use only the public AgentMail API or official SDK.
+- Do not use a library that implements the IMAP server or protocol core.
 - Do not access production systems or internal AgentMail storage.
 - Public RFCs, web research, and approved AI tools are allowed.
 - Disclose meaningful generated or copied code in your README.
@@ -114,11 +56,10 @@ Optional extensions include richer sequence sets, `FETCH`, `STATUS`, `EXAMINE`, 
 
 By the Day 2 code freeze, commit:
 
-- the runnable server;
-- automated tests for the highest-risk behavior;
+- the runnable server and focused automated tests;
 - setup, start, and smoke-test commands;
-- implemented and unsupported commands;
-- a short architecture and UID-persistence explanation;
+- implemented and unsupported behavior;
+- a short architecture and persistence explanation;
 - known limitations and next steps.
 
 ## Schedule
@@ -144,11 +85,10 @@ By the Day 2 code freeze, commit:
 
 ## Evaluation
 
-We evaluate the working user path, protocol and byte correctness, API integration, UID design, testing, reliability, security, prioritization, collaboration, and candid technical communication. We do not evaluate typing speed, memorized IMAP trivia, presentation polish, or use of approved tools.
+We evaluate the working path, protocol correctness, API integration, state design, testing, reliability, security, prioritization, collaboration, and candid technical communication. We do not reward command count or presentation polish over a sound core.
 
 ## Start here
 
-1. Read [API resources](./API_RESOURCES.md).
-2. Start the [local test harness](./test-harness/README.md).
-3. Use the [manual TCP smoke test](./MANUAL_SMOKE_TEST.md) while building.
-4. Optionally try a [standard IMAP client](./STANDARD_IMAP_CLIENT.md).
+1. Review [API and protocol resources](./API_RESOURCES.md).
+2. Start the [local AgentMail API sandbox](./test-harness/README.md).
+3. Use the [small TCP example](./MANUAL_SMOKE_TEST.md) to begin.

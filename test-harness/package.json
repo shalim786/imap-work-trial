@@ -8,10 +8,6 @@
   },
   "scripts": {
     "api": "node fake-agentmail-api.mjs",
-    "check": "node imap-acceptance.mjs",
-    "check:store": "node imap-acceptance.mjs --store",
-    "uids:record": "node imap-acceptance.mjs --record-uids",
-    "uids:verify": "node imap-acceptance.mjs --verify-uids",
     "test": "node --test tests/*.test.mjs"
   }
 }

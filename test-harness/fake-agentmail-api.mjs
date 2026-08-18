@@ -412,8 +412,6 @@ export function createFakeAgentMailServer({
           return apiError(res, 400, "Invalid limit");
         }
 
-        // Deliberately return short pages. Clients must follow next_page_token
-        // instead of assuming the server always fills the requested limit.
         const pageSize = Math.min(Math.floor(requestedLimit), 2);
         const page = items.slice(offset, offset + pageSize);
         const nextOffset = offset + page.length;

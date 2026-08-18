@@ -36,4 +36,3 @@ vendor/
 *.sqlite3
 *.log
 tmp/
-test-harness/.state/
