@@ -1,11 +1,16 @@
 # AgentMail IMAP work trial
 
-This repository intentionally begins without implementation code.
+This repository starts without implementation code.
 
-Read the candidate brief supplied by the interview facilitator, choose the language and tooling you work most effectively in, and document setup, execution, tests, architecture, and tradeoffs here as you build.
+1. Read the [assignment](./ASSIGNMENT.md).
+2. Review the [AgentMail API resources](./API_RESOURCES.md).
+3. Start the [local validation harness](./test-harness/README.md).
+4. Build in the language you work most effectively in.
 
-Never commit the sandbox API key or raw authorization headers.
+Useful references:
 
-## Local validation
+- [Manual TCP smoke test](./MANUAL_SMOKE_TEST.md)
+- [Optional standard IMAP clients](./STANDARD_IMAP_CLIENT.md)
+- [Facilitator setup](./FACILITATOR_SETUP.md)
 
-The language-neutral [test harness](./test-harness/README.md) provides a deterministic fake AgentMail API and a black-box IMAP acceptance client. It contains no reference IMAP implementation and uses no third-party dependencies.
+Never commit sandbox credentials or raw authorization headers.
