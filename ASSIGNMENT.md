@@ -114,8 +114,7 @@ By the Day 2 code freeze, commit:
 | 9:00  | Welcome and environment check                        |
 | 10:00 | Plan sync: architecture, milestones, risks, and cuts |
 | 1:30  | Working-slice checkpoint                             |
-| 4:30  | Demo, blockers, and Day 2 plan                       |
-| 5:00  | Stop work                                            |
+| 4:30  | Demo, blockers, and Day 2 plan                       |                                         |
 
 ### Day 2
 
@@ -127,7 +126,6 @@ By the Day 2 code freeze, commit:
 | 4:00 | Final presentation and live demo  |
 | 4:45 | Candidate questions and wrap-up   |
 
-Lunch is 12:30 to 1:30 and is not evaluated. Do not work overnight; overnight changes are not considered.
 
 ## Evaluation
 
