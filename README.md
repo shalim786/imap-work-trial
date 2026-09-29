@@ -7,6 +7,6 @@
 
 Optional: [standard IMAP client settings](./STANDARD_IMAP_CLIENT.md).
 
-Optional starter: [AgentMail IMAP template](https://github.com/agentmail-to/imap-template).
+Optional starter: [bundled AgentMail IMAP template](./template/README.md). Run its setup commands from `template/`. Deployment is not required for the work trial.
 
 Never commit sandbox credentials or raw authorization headers.

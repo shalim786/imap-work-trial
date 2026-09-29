@@ -1,0 +1,10 @@
+name: imap-template
+description: Static site on S3 + CloudFront, served from a Route53 domain
+runtime:
+    name: nodejs
+    options:
+        packagemanager: pnpm
+config:
+    domain:
+        type: string
+        description: Apex domain with an existing Route53 hosted zone in the target account
