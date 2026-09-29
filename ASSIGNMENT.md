@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a small IMAP4rev1 server over the public AgentMail API. A client should be able to read inbox messages and save a plain-text draft.
+Build a small IMAP4rev1 server over the public AgentMail API. A client should be able to read inbox messages.
 
 You have two working days. Build a reliable vertical slice and explain your tradeoffs. The exercise uses synthetic data and will not be shipped.
 
@@ -12,23 +12,21 @@ A user must be able to:
 
 1. start your server with one documented command;
 2. connect over local TCP and authenticate with an inbox ID and API key;
-3. discover and open `INBOX` and `Drafts`;
+3. discover and open `INBOX`;
 4. fetch message metadata and complete RFC 822 content;
-5. inspect existing AgentMail drafts;
-6. append a plain-text draft without losing its recipients, subject, or body;
-7. disconnect cleanly.
+5. disconnect cleanly.
 
-At minimum, support the parts of `CAPABILITY`, `LOGIN`, `LIST`, `SELECT`, `UID FETCH`, `APPEND`, `NOOP`, and `LOGOUT` needed for that path.
+At minimum, support the parts of `CAPABILITY`, `LOGIN`, `LIST`, `SELECT`, `UID FETCH`, `NOOP`, and `LOGOUT` needed for that path.
 
 ## Correctness expectations
 
-- `INBOX` represents received AgentMail messages. `Drafts` uses the AgentMail Drafts API.
-- Reflect read state as `\Seen` and identify drafts with `\Draft`. Decide and document any other mailbox or flag mappings.
+- `INBOX` represents received AgentMail messages.
+- Reflect read state as `\Seen`. Decide and document any other mailbox or flag mappings.
 - Preserve raw message bytes and use byte lengths for IMAP literals and sizes.
 - Do not silently truncate paginated API results.
 - Keep UIDs stable across reconnects and process restarts. Adding an item must not renumber or reuse existing UIDs.
 - Handle malformed commands, invalid credentials, unsupported behavior, and API failures without crashing, hanging, or exposing secrets.
-- TLS, deployment, attachments in new drafts, draft sending, and production compatibility are out of scope.
+- Drafts, `APPEND`, sending, TLS, deployment, and production compatibility are out of scope.
 
 ## Decisions you own
 
@@ -36,8 +34,7 @@ Choose and be prepared to defend:
 
 - language, dependencies, and project structure;
 - parser and session-state design;
-- mailbox behavior beyond `INBOX` and `Drafts`;
-- draft-to-RFC-822 projection;
+- mailbox behavior beyond `INBOX`;
 - persistence, synchronization, and caching strategy;
 - test approach and one additional IMAP capability if the core is reliable.
 

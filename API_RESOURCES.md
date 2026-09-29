@@ -6,7 +6,6 @@ The official documentation is the source of truth.
 
 - [API reference](https://docs.agentmail.to/api-reference)
 - [Messages guide](https://docs.agentmail.to/messages)
-- [Drafts guide](https://docs.agentmail.to/drafts)
 - [Inboxes guide](https://docs.agentmail.to/inboxes)
 
 Production REST base URL: `https://api.agentmail.to/v0`.

@@ -1,6 +1,6 @@
 # Local AgentMail API sandbox
 
-This directory contains a deterministic fake AgentMail API with synthetic messages and drafts. It requires Node.js 20 or newer and has no third-party dependencies.
+This directory contains a deterministic fake AgentMail API with synthetic messages. It requires Node.js 20 or newer and has no third-party dependencies.
 
 Start it with:
 

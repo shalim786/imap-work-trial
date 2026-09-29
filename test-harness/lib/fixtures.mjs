@@ -30,28 +30,6 @@ function fixture({
   });
 }
 
-function draftFixture({
-  id,
-  to,
-  cc = [],
-  bcc = [],
-  replyTo = [],
-  subject,
-  text,
-  updatedAt,
-}) {
-  return Object.freeze({
-    id,
-    to: Object.freeze([...to]),
-    cc: Object.freeze([...cc]),
-    bcc: Object.freeze([...bcc]),
-    replyTo: Object.freeze([...replyTo]),
-    subject,
-    text,
-    updatedAt,
-  });
-}
-
 export const INBOX_ID = "candidate@imap.test";
 export const API_KEY = "test_agentmail_key";
 
@@ -225,42 +203,12 @@ export const ADDED_MESSAGE = fixture({
   ]),
 });
 
-export const BASE_DRAFTS = Object.freeze([
-  draftFixture({
-    id: "draft_existing_simple",
-    to: ["reviewer@example.com"],
-    subject: "Existing review draft",
-    text: "Please review this draft before it is sent.",
-    updatedAt: "2026-08-17T22:00:00.000Z",
-  }),
-  draftFixture({
-    id: "draft_existing_addresses",
-    to: ["primary@example.net"],
-    cc: ["copy@example.net"],
-    bcc: ["audit@example.net"],
-    replyTo: ["replies@example.net"],
-    subject: "Draft with address fields",
-    text: "Please keep all recipients on this draft.",
-    updatedAt: "2026-08-17T23:00:00.000Z",
-  }),
-]);
-
 export function cloneFixture(item) {
   return {
     ...item,
     labels: [...item.labels],
     to: [...item.to],
     raw: Buffer.from(item.raw),
-  };
-}
-
-export function cloneDraftFixture(item) {
-  return {
-    ...item,
-    to: [...item.to],
-    cc: [...item.cc],
-    bcc: [...item.bcc],
-    replyTo: [...item.replyTo],
   };
 }
 
