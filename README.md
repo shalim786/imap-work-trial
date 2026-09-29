@@ -7,4 +7,6 @@
 
 Optional: [standard IMAP client settings](./STANDARD_IMAP_CLIENT.md).
 
+Optional starter: [AgentMail IMAP template](https://github.com/agentmail-to/imap-template).
+
 Never commit sandbox credentials or raw authorization headers.
