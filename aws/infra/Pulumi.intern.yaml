@@ -1,0 +1,19 @@
+# ESC supplies short-lived AWS credentials. Change this environment for another account.
+environment:
+  - platform/intern
+config:
+  aws:region: us-east-1
+  imap-template:domain: imap.to
+  agentmail-imap-aws:hostname: trial-imap.imap.to
+  agentmail-imap-aws:protectDatabase: "true"
+  agentmail-imap-aws:natGateways: "2"
+  agentmail-imap-aws:autoscaling: "true"
+  agentmail-imap-aws:appEnabled: "true"
+  agentmail-imap-aws:enableService: "true"
+  agentmail-imap-aws:instanceType: t3.small
+  agentmail-imap-aws:desiredInstances: "2"
+  agentmail-imap-aws:minInstances: "2"
+  agentmail-imap-aws:maxInstances: "8"
+  agentmail-imap-aws:cpuTarget: "60"
+  agentmail-imap-aws:databasePassword:
+    secure: AAABAAEM9tWJWpF8csgviH1T6FG3ErD8xBv+YPO0j3fMDlhFVIXmfc4UucNj9y+GRlLQ

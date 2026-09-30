@@ -1,0 +1,37 @@
+{
+  "environment": {
+    "os": "Darwin",
+    "python": "3.12.14",
+    "storage": "sqlite",
+    "upstream": "synthetic local HTTP",
+    "api_rps": 1000,
+    "scope": "single process; not AWS or PostgreSQL capacity proof"
+  },
+  "failures": {
+    "outage_recovery_uid_stable": true,
+    "outage_recovery_seconds": 0.122,
+    "six_rate_limits_then_fetch_success": true,
+    "rate_limit_recovery_seconds": 0.072,
+    "restart_uid_stable": true,
+    "invalid_credentials_rejected": true,
+    "service_survived_failures": true,
+    "disconnected_retry_does_not_block_refresh": true,
+    "connection_limit_rejection": true,
+    "slots_recovered_after_disconnect": true
+  },
+  "load": {
+    "clients": 50,
+    "mailbox_messages": 1003,
+    "rounds_per_client": 3,
+    "mixed_commands": 450,
+    "elapsed_seconds": 6.937,
+    "commands_per_second": 64.87,
+    "client_p50_seconds": 6.865,
+    "client_p95_seconds": 6.918,
+    "client_max_seconds": 6.932,
+    "server_rss_kib_after_load": 139888,
+    "errors": 0,
+    "metadata_complete": true,
+    "raw_literals_complete": true
+  }
+}

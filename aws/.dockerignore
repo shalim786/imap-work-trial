@@ -1,0 +1,14 @@
+*
+!Dockerfile
+!requirements.lock
+!pyproject.toml
+!agentmail_imap/
+!agentmail_imap/**
+!scripts/
+!scripts/**
+!certs/
+!scripts/
+!scripts/**
+!certs/global-bundle.pem
+**/__pycache__
+**/*.pyc

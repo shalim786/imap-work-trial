@@ -40,3 +40,13 @@ tmp/
 # Runtime profiles and packaging metadata
 var/
 *.egg-info/
+
+# Private TLS key material
+*.key
+*.pem
+
+# Public AWS RDS trust bundle (not private key material)
+!aws/certs/global-bundle.pem
+
+# Pulumi-generated allowlisted EC2 application archives
+aws/.generated/

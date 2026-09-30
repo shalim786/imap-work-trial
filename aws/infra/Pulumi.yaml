@@ -1,0 +1,6 @@
+name: imap-template
+description: Existing imap.to website plus EC2 Docker AgentMail IMAP service
+runtime:
+  name: nodejs
+  options:
+    packagemanager: pnpm
