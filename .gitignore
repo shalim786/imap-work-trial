@@ -36,3 +36,7 @@ vendor/
 *.sqlite3
 *.log
 tmp/
+
+# Runtime profiles and packaging metadata
+var/
+*.egg-info/

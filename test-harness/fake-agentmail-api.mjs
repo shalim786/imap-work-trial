@@ -45,7 +45,17 @@ async function readJson(req) {
 function listValue(searchParams, key) {
   return searchParams
     .getAll(key)
-    .flatMap((value) => value.split(","))
+    .flatMap((value) => {
+      // The official Python SDK JSON-encodes list-valued query parameters.
+      // Keep repeated/plain comma forms supported for independent test clients.
+      if (value.trim().startsWith("[")) {
+        try {
+          const decoded = JSON.parse(value);
+          if (Array.isArray(decoded) && decoded.every((item) => typeof item === "string")) return decoded;
+        } catch { /* fall through to the original scalar representation */ }
+      }
+      return value.split(",");
+    })
     .map((value) => value.trim())
     .filter(Boolean);
 }

@@ -65,6 +65,18 @@ test("returns short paginated label-filtered pages", async (t) => {
   assert.equal(second.value.next_page_token, undefined);
 });
 
+test("accepts official Python SDK JSON-array label query encoding", async (t) => {
+  const { baseUrl } = await withServer(t);
+  const labels = encodeURIComponent(JSON.stringify(["received"]));
+  const first = await jsonRequest(`${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/messages?labels=${labels}&limit=100`);
+  assert.equal(first.response.status, 200);
+  assert.equal(first.value.messages.length, 2);
+  assert.ok(first.value.messages.every((message) => message.labels.includes("received")));
+  const second = await jsonRequest(`${baseUrl}/inboxes/${encodeURIComponent(INBOX_ID)}/messages?labels=${labels}&limit=100&page_token=${encodeURIComponent(first.value.next_page_token)}`);
+  assert.equal(second.value.messages.length, 2);
+  assert.ok([...first.value.messages, ...second.value.messages].some((message) => message.labels.includes("trash")));
+});
+
 test("serves exact raw bytes through the documented two-step flow", async (t) => {
   const { baseUrl } = await withServer(t);
   const fixture = BASE_MESSAGES[1];
