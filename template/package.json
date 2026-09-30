@@ -1,0 +1,17 @@
+{
+    "name": "imap-template",
+    "private": true,
+    "packageManager": "pnpm@11.9.0",
+    "engines": {
+        "node": ">=22"
+    },
+    "scripts": {
+        "build": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@pulumi/aws": "^7.4.0",
+        "@pulumi/pulumi": "^3.210.0",
+        "@types/node": "^22",
+        "typescript": "^5.0.0"
+    }
+}

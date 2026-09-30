@@ -132,3 +132,5 @@ flowchart LR
 ```
 
 Code and tests were generated with Codex against the supplied handoff, independent synthetic fixtures, and the official SDK; no third-party IMAP server implementation was copied. References: [assignment](ASSIGNMENT.md), [API/protocol resources](API_RESOURCES.md), [final implementation plan](IMPLEMENTATION_PLAN.md), [IMAP4rev1 RFC 3501](https://www.rfc-editor.org/rfc/rfc3501), and [AgentMail documentation](https://docs.agentmail.to/).
+
+The bundled [AWS starter template](template/README.md) provisions a static website on S3/CloudFront, with Route53 DNS and ACM TLS. It does not currently host the Python IMAP service. Its deployment commands are future work and have not been run.

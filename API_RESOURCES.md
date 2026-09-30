@@ -12,6 +12,11 @@ Production REST base URL: `https://api.agentmail.to/v0`.
 
 Official SDKs are optional: [TypeScript](https://www.npmjs.com/package/agentmail) or [Python](https://pypi.org/project/agentmail/).
 
+## Optional starter template
+
+- [Bundled AgentMail IMAP template](./template/README.md): optional project scaffolding. Run its setup commands from `template/`. Deployment is not required for the work trial.
+- Source: [agentmail-to/imap-template](https://github.com/agentmail-to/imap-template), copied from [revision `1eb3417`](https://github.com/agentmail-to/imap-template/commit/1eb3417eeef3100a8aa812f28ee7a7eb91e861f6).
+
 ## Local AgentMail sandbox
 
 | Setting       | Value                             |

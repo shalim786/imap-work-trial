@@ -1,0 +1,6 @@
+# AWS credentials come from Pulumi ESC (OIDC into the intern account); no local profile needed.
+environment:
+    - platform/intern
+config:
+    aws:region: us-east-1
+    imap-template:domain: imap.to

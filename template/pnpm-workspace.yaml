@@ -1,0 +1,4 @@
+# pnpm blocks dependency postinstall scripts by default. protobufjs (via @pulumi/pulumi)
+# only prints a version-compat warning, so it stays denied.
+allowBuilds:
+    protobufjs: false
